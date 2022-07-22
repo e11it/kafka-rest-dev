@@ -51,6 +51,7 @@ generate_jks_certs() {
   local _cn_name=${2}
   # Create keystores
         # TODO: -ext SAN=dns:abc.com,ip:1.1.1.1 add SAN to brokers to be able connect to brokers outside of docker
+        # https://docs.oracle.com/javase/7/docs/technotes/tools/solaris/keytool.html
 	keytool -genkey -noprompt \
 				 -alias ${_cn_name} \
 				 -dname "CN=${_cn_name}, OU=${SSL_OU}, O=${SSL_O}, L=${SSL_L}, S=${SSL_S}, C=${SSL_C}" \
