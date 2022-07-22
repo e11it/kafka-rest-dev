@@ -1,0 +1,12 @@
+auth:
+  prefix: /topics/
+  urlvalidreg: ^999-9(-\d{3}-\d)?\.[a-z0-9-]+\.(db|cdc|cmd|sys|log|tmp)\.[a-z0-9-.]+\.\d+$
+  acl:
+  - path: 999-9\.[a-z0-9-]+\.(db|cdc)\.+?
+    users:
+    - kafka_local_dev
+    methods:
+    - post
+    contenttype:
+    - application/vnd.kafka.avro.v1+json
+    - application/vnd.kafka.avro.v2+json

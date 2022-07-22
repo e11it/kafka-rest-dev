@@ -1,0 +1,314 @@
+---
+version: '2'
+services:
+  zookeeper:
+    image: confluentinc/cp-zookeeper:latest
+    hostname: zookeeper
+    container_name: zookeeper
+    environment:
+      ZOOKEEPER_CLIENT_PORT: 2181
+      ZOOKEEPER_TICK_TIME: 2000
+
+  broker1:
+    image: confluentinc/cp-kafka:latest
+    depends_on:
+      - zookeeper
+    ports:
+      - "19093:19093"
+    ulimits:
+      nproc: 65535
+      nofile:
+        soft: 262144
+        hard: 262144
+    volumes:
+      - "/etc/localtime:/etc/localtime:ro"
+      - kafka_b1_data:/var/lib/kafka/data
+      - "./secrets:/etc/kafka/secrets"
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "512m"
+    environment:
+      KAFKA_BROKER_ID: 1
+      KAFKA_LOG4J_LOGGERS: "kafka.controller=INFO,kafka.producer.async.DefaultEventHandler=INFO,state.change.logger=INFO,kafka.authorizer.logger=DEBUG"
+      KAFKA_AUTHORIZER_CLASS_NAME: kafka.security.authorizer.AclAuthorizer
+      KAFKA_LOG_RETENTION_BYTES: 3221225472
+      KAFKA_ZOOKEEPER_CONNECT: 'zookeeper:2181'
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: SSL:SSL,SSL_INT:SSL
+      KAFKA_ADVERTISED_LISTENERS: "SSL_INT://broker1:9093,SSL://$HOSTNAME:19093"
+      KAFKA_INTER_BROKER_LISTENER_NAME: SSL_INT
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+      KAFKA_NUM_NETWORK_THREADS: 6
+      KAFKA_NUM_IO_THREADS: 6
+      KAFKA_SOCKET_REQUEST_MAX_BYTES: 10485760
+      KAFKA_SOCKET_RECEIVE_BUFFER_BYTES: 10485760
+      KAFKA_SOCKET_SEND_BUFFER_BYTES: 10485760
+      KAFKA_JMX_PORT: 39999
+      KAFKA_SSL_PRINCIPAL_MAPPING_RULES: RULE:^.*[Cc][Nn]=([a-zA-Z0-9.]*).*$$/$$1/L,DEFAULT
+      KAFKA_ALLOW_EVERYONE_IF_NO_ACL_FOUND: False
+      KAFKA_SUPER_USERS: User:broker1;User:broker2;User:ksm;User:cmak;User:akhq
+      KAFKA_SSL_KEYSTORE_FILENAME: broker1.keystore.jks
+      KAFKA_SSL_KEYSTORE_CREDENTIALS: creds
+      KAFKA_SSL_KEY_CREDENTIALS: creds
+      KAFKA_SSL_TRUSTSTORE_FILENAME: broker1.truststore.jks
+      KAFKA_SSL_TRUSTSTORE_CREDENTIALS: creds
+      KAFKA_SSL_ENDPOINT_IDENTIFICATION_ALGORITHM: ""
+      KAFKA_LISTENER_NAME_INTERNAL_SSL_ENDPOINT_IDENTIFICATION_ALGORITHM: ""
+      KAFKA_SSL_CLIENT_AUTH: requested
+
+  broker2:
+    image: confluentinc/cp-kafka:latest
+    depends_on:
+      - zookeeper
+    ports:
+      - "29093:29093"
+    volumes:
+      - "/etc/localtime:/etc/localtime:ro"
+      - kafka_b2_data:/var/lib/kafka/data
+      - "./secrets:/etc/kafka/secrets"
+    ulimits:
+      nproc: 65535
+      nofile:
+        soft: 262144
+        hard: 262144
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "512m"
+    environment:
+      KAFKA_BROKER_ID: 2
+      KAFKA_LOG4J_LOGGERS: "kafka.controller=INFO,kafka.producer.async.DefaultEventHandler=INFO,state.change.logger=INFO,kafka.authorizer.logger=DEBUG"
+      KAFKA_AUTHORIZER_CLASS_NAME: kafka.security.authorizer.AclAuthorizer
+      KAFKA_LOG_RETENTION_BYTES: 3221225472
+      KAFKA_ZOOKEEPER_CONNECT: 'zookeeper:2181'
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: SSL:SSL,SSL_INT:SSL
+      KAFKA_ADVERTISED_LISTENERS: "SSL_INT://broker2:9093,SSL://$HOSTNAME:29093"
+      KAFKA_INTER_BROKER_LISTENER_NAME: SSL_INT
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+      KAFKA_NUM_NETWORK_THREADS: 6
+      KAFKA_NUM_IO_THREADS: 6
+      KAFKA_SOCKET_REQUEST_MAX_BYTES: 10485760
+      KAFKA_SOCKET_RECEIVE_BUFFER_BYTES: 10485760
+      KAFKA_SOCKET_SEND_BUFFER_BYTES: 10485760
+      KAFKA_JMX_PORT: 39998
+      KAFKA_SSL_PRINCIPAL_MAPPING_RULES: RULE:^.*[Cc][Nn]=([a-zA-Z0-9.]*).*$$/$$1/L,DEFAULT
+      KAFKA_ALLOW_EVERYONE_IF_NO_ACL_FOUND: False
+      KAFKA_SUPER_USERS: User:broker1;User:broker2;User:ksm;User:cmak;User:akhq
+      KAFKA_SSL_KEYSTORE_FILENAME: broker2.keystore.jks
+      KAFKA_SSL_KEYSTORE_CREDENTIALS: creds
+      KAFKA_SSL_KEY_CREDENTIALS: creds
+      KAFKA_SSL_TRUSTSTORE_FILENAME: broker2.truststore.jks
+      KAFKA_SSL_TRUSTSTORE_CREDENTIALS: creds
+      KAFKA_SSL_ENDPOINT_IDENTIFICATION_ALGORITHM: ""
+      KAFKA_LISTENER_NAME_INTERNAL_SSL_ENDPOINT_IDENTIFICATION_ALGORITHM: ""
+      KAFKA_SSL_CLIENT_AUTH: requested
+
+  ksm:
+    image: conduktor/kafka-security-manager:latest
+    environment:
+      KSM_READONLY: "false"
+      AUTHORIZER_ZOOKEEPER_CONNECT: "zookeeper:2181"
+      # FILE:
+      SOURCE_CLASS: "io.conduktor.ksm.source.FileSourceAcl"
+      SOURCE_FILE_FILENAME: "config/acls.csv"
+      AUTHORIZER_CLASS: "io.conduktor.ksm.compat.AdminClientAuthorizer"
+      ADMIN_CLIENT_BOOTSTRAP_SERVERS: "broker1:9093,broker2:9093"
+      ADMIN_CLIENT_SECURITY_PROTOCOL: SSL
+      ADMIN_CLIENT_SSL_KEYSTORE_LOCATION: /etc/kafka/secrets/ksm.keystore.jks
+      ADMIN_CLIENT_SSL_KEYSTORE_PASSWORD: $JKS_PASS
+      ADMIN_CLIENT_SSL_TRUSTSTORE_LOCATION: /etc/kafka/secrets/ksm.truststore.jks
+      ADMIN_CLIENT_SSL_TRUSTSTORE_PASSWORD: $JKS_PASS
+    volumes:
+      - "${PWD}/ksm:/opt/docker/config:ro"
+      - "${PWD}/secrets:/etc/kafka/secrets"
+    depends_on:
+      - broker1
+      - broker2
+
+  schema-registry:
+    image: confluentinc/cp-schema-registry:latest
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "512m"
+    depends_on:
+      - zookeeper
+      - broker1
+      - broker2
+    volumes:
+      - "/etc/localtime:/etc/localtime:ro"
+      - "${PWD}/secrets:/etc/kafka/secrets"
+    environment:
+      SCHEMA_REGISTRY_DEBUG: true
+      SCHEMA_REGISTRY_HOST_NAME: schema-registry
+      SCHEMA_REGISTRY_LISTENERS: http://0.0.0.0:8081
+      SCHEMA_REGISTRY_INTER_INSTANCE_PROTOCOL: http
+      SCHEMA_REGISTRY_KAFKASTORE_BOOTSTRAP_SERVERS: broker1:9093,broker2:9093
+      SCHEMA_REGISTRY_KAFKASTORE_SECURITY_PROTOCOL: SSL
+      SCHEMA_REGISTRY_KAFKASTORE_SSL_KEYSTORE_LOCATION: /etc/kafka/secrets/sr.keystore.jks
+      SCHEMA_REGISTRY_KAFKASTORE_SSL_KEYSTORE_PASSWORD: $JKS_PASS
+      SCHEMA_REGISTRY_KAFKASTORE_SSL_TRUSTSTORE_LOCATION: /etc/kafka/secrets/sr.truststore.jks
+      SCHEMA_REGISTRY_KAFKASTORE_SSL_TRUSTSTORE_PASSWORD: $JKS_PASS
+      SCHEMA_REGISTRY_ACCESS_CONTROL_ALLOW_METHODS: "GET,POST,PUT,DELETE,OPTIONS"
+      SCHEMA_REGISTRY_ACCESS_CONTROL_ALLOW_ORIGIN: "*"
+      SCHEMA_REGISTRY_SCHEMA_COMPATIBILITY_LEVEL: 'FULL_TRANSITIVE'
+      SCHEMA_REGISTRY_KAFKASTORE_TOPIC_REPLICATION_FACTOR: 1
+      SCHEMA_REGISTRY_MASTER_ELIGIBILITY: true
+      SCHEMA_REGISTRY_LEADER_ELIGIBILITY: true
+      SCHEMA_REGISTRY_MODE_MUTABILITY: true
+      SCHEMA_REGISTRY_KAFKASSL_ENDPOINT_IDENTIFICATION_ALGORITHM: ""
+
+  schema-registry-ui:
+    image: landoop/schema-registry-ui
+    depends_on:
+      - schema-registry
+    hostname: schema-registry-ui
+    container_name: schema-registry-ui
+    ports:
+      - "8000:8000"
+    environment:
+      SCHEMAREGISTRY_URL: "http://schema-registry:8081"
+      ALLOW_GLOBAL: "true"
+      ALLOW_TRANSITIVE: "true"
+      ALLOW_DELETION: "true"
+      PROXY: 1
+
+  rest-proxy:
+    image: confluentinc/cp-kafka-rest:7.1.1
+    depends_on:
+      - zookeeper
+      - broker1
+      - broker2
+      - schema-registry
+    volumes:
+      - "/etc/localtime:/etc/localtime:ro"
+      - "${PWD}/secrets:/etc/kafka/secrets"
+    environment:
+      KAFKA_REST_HOST_NAME: rest-proxy
+      KAFKA_REST_ID: 'rp'
+      KAFKA_REST_BOOTSTRAP_SERVERS: 'broker1:9093,broker2:9093'
+      KAFKA_REST_CLIENT_SECURITY_PROTOCOL: SSL
+      KAFKA_REST_CLIENT_SSL_TRUSTSTORE_LOCATION: /etc/kafka/secrets/rest.truststore.jks
+      KAFKA_REST_CLIENT_SSL_TRUSTSTORE_PASSWORD: $JKS_PASS
+      KAFKA_REST_CLIENT_SSL_KEYSTORE_LOCATION: /etc/kafka/secrets/rest.keystore.jks
+      KAFKA_REST_CLIENT_SSL_KEYSTORE_PASSWORD: $JKS_PASS
+      KAFKA_REST_LISTENERS: "http://0.0.0.0:8082"
+      KAFKA_REST_SCHEMA_REGISTRY_URL: 'http://schema-registry:8081'
+      KAFKA_REST_CONSUMER_REQUEST_TIMEOUT_MS: 30000
+      KAFKAREST_HEAP_OPTS: -Xmx2G
+      KAFKA_REST_COMPRESSION_ENABLE: 'true'
+      KAFKA_REST_ACKS: all
+      KAFKA_REST_BUFFER_MEMORY: 100663296
+      KAFKA_REST_RETRIES: 2147483647
+      KAFKA_REST_COMPRESSION_TYPE: 'lz4'
+      KAFKA_REST_SHUTDOWN_GRACEFUL_MS: 30000
+      # KAFKA_REST_LOG4J_ROOT_LOGLEVEL: 'TRACE'
+      KAFKA_REST_LOG4J_LOGGERS: "io.confluent.kafka.serializers=WARN"
+      # KAFKA_REST_DEBUG: 'True'
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "1024m"
+
+  nginx:
+    image: xcgd/nginx-vts:stable
+    restart: always
+    depends_on:
+      - ra
+      - ra-sr
+      - rest-proxy
+      - schema-registry
+    ports:
+      - 80:80
+    # - 443:443
+      - 8081:8081
+      - 8082:8082
+    volumes:
+      - "/etc/localtime:/etc/localtime:ro"
+      - ./nginx:/etc/nginx:ro
+    command: ["nginx", "-g", "daemon off;"]
+    #healthcheck:
+    #  test: ['CMD', 'curl --fail http://localhost/ || exit 1']
+    #  interval: 30s
+    #  timeout: 3s
+    #  retries: 3
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "512m"
+
+  cmak:
+    image: hlebalbau/kafka-manager
+    ports:
+    - 9000:9000
+    environment:
+      ZK_HOSTS: zookeeper:2181
+      JAVA_OPTS: -XX:MaxRAMPercentage=80 -Dplay.http.context=/ -Dkafka-manager.consumer.properties.file=/etc/cmak/consumer-properties
+      KAFKA_MANAGER_AUTH_ENABLED: false
+    volumes:
+      - "${PWD}/secrets:/etc/kafka/secrets:ro"
+      - "${PWD}/cmak:/etc/cmak:ro"
+    depends_on:
+      - zookeeper
+      - broker1
+      - broker2
+    restart: always
+    
+  akhq:
+    image: tchiotludo/akhq:latest
+    ports:
+    - 8080:8080
+    environment:
+      AKHQ_CONFIGURATION: |
+        akhq:
+          connections:
+            kafka:
+              properties:
+                bootstrap.servers: "broker1:9093,broker2:9093"
+                security.protocol: SSL
+                ssl.truststore.location: /etc/kafka/secrets/akhq.truststore.jks
+                ssl.truststore.password: $JKS_PASS
+                ssl.keystore.location: /etc/kafka/secrets/akhq.keystore.jks
+                ssl.keystore.password: $JKS_PASS
+                ssl.key.password: $JKS_PASS
+              schema-registry:
+                url: "http://schema-registry:8081"
+    volumes:
+      - "${PWD}/secrets:/etc/kafka/secrets:ro"
+    depends_on:
+      - zookeeper
+      - broker1
+      - broker2
+      - schema-registry
+    restart: always
+
+  ra:
+    image: e11it/rab:latest
+    restart: always
+    environment:
+      GIN_MODE: release
+    volumes:
+      - "${PWD}/ra/config.yml:/config.yml:ro"
+    restart: always
+
+  ra-sr:
+    image: e11it/rab:latest
+    restart: always
+    environment:
+      GIN_MODE: release
+    volumes:
+      - "${PWD}/ra/config-sr.yml:/config.yml:ro"
+    restart: always
+
+volumes:
+  kafka_b1_data: {}
+  kafka_b2_data: {}
+
+networks:
+  back-tier:

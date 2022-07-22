@@ -1,0 +1,12 @@
+KafkaPrincipal,ResourceType,PatternType,ResourceName,Operation,PermissionType,Host
+User:rest,Topic,PREFIXED,999-9,All,Allow,*
+User:sr,Topic,LITERAL,_schemas,All,Allow,*
+User:sr,Group,LITERAL,schema-registry,All,Allow,*
+User:sr,Topic,LITERAL,*,Describe,Allow,*
+User:akhq,Group,LITERAL,*,DESCRIBE,Allow,*
+User:akhq,Group,PREFIXED,service-prod.sre-kafka-readall.,All,Allow,*
+User:akhq,Cluster,LITERAL,kafka-cluster,DESCRIBE,Allow,*
+User:akhq,Topic,LITERAL,*,DescribeConfigs,Allow,*
+User:akhq,Topic,LITERAL,*,Read,Allow,*
+User:akhq,Topic,LITERAL,*,DESCRIBE,Allow,*
+User:akhq,Topic,LITERAL,*,Delete,Allow,*

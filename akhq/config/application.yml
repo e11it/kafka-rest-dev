@@ -1,0 +1,16 @@
+micronaut:
+  server:
+    host: localhost
+akhq:
+  connections:
+    kafka:
+      properties:
+        bootstrap.servers: "broker1:9093,broker2:9093"
+        security.protocol: SSL
+        ssl.truststore.location: /etc/kafka/secrets/akhq.truststore.jks
+        ssl.truststore.password: changeit
+        ssl.keystore.location: /etc/kafka/secrets/akhq.keystore.jks
+        ssl.keystore.password: changeit
+        ssl.key.password: changeit   
+      schema-registry:
+        url: "http://schema-registry:8081"
