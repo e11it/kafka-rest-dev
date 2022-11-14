@@ -55,6 +55,8 @@ generate_jks_certs() {
 	keytool -genkey -noprompt \
 				 -alias ${_cn_name} \
 				 -dname "CN=${_cn_name}, OU=${SSL_OU}, O=${SSL_O}, L=${SSL_L}, S=${SSL_S}, C=${SSL_C}" \
+                                 -ext SAN=dns:localhost,ip:127.0.0.1 \
+                                 -ext SAN=dns:$(hostname) \
 				 -keystore "$(concatenate_paths ${OUT_PATH} ${_file_name}.keystore.jks)" \
 				 -keyalg RSA \
 				 -storepass "${JKS_PASS}" \

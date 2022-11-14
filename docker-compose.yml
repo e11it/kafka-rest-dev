@@ -1,16 +1,28 @@
 ---
 version: '2'
+
+x-logging:
+  &default-logging
+  options:
+    max-size: '12m'
+    max-file: '5'
+  driver: json-file
+
 services:
   zookeeper:
     image: confluentinc/cp-zookeeper:latest
+    logging: *default-logging
     hostname: zookeeper
     container_name: zookeeper
     environment:
       ZOOKEEPER_CLIENT_PORT: 2181
       ZOOKEEPER_TICK_TIME: 2000
+    volumes:
+      - kafka_zookeeper:/var/lib/zookeeper
 
   broker1:
     image: confluentinc/cp-kafka:latest
+    logging: *default-logging
     depends_on:
       - zookeeper
     ports:
@@ -24,10 +36,6 @@ services:
       - "/etc/localtime:/etc/localtime:ro"
       - kafka_b1_data:/var/lib/kafka/data
       - "./secrets:/etc/kafka/secrets"
-    logging:
-      driver: "json-file"
-      options:
-        max-size: "512m"
     environment:
       KAFKA_BROKER_ID: 1
       KAFKA_LOG4J_LOGGERS: "kafka.controller=INFO,kafka.producer.async.DefaultEventHandler=INFO,state.change.logger=INFO,kafka.authorizer.logger=DEBUG"
@@ -61,6 +69,7 @@ services:
 
   broker2:
     image: confluentinc/cp-kafka:latest
+    logging: *default-logging
     depends_on:
       - zookeeper
     ports:
@@ -74,10 +83,6 @@ services:
       nofile:
         soft: 262144
         hard: 262144
-    logging:
-      driver: "json-file"
-      options:
-        max-size: "512m"
     environment:
       KAFKA_BROKER_ID: 2
       KAFKA_LOG4J_LOGGERS: "kafka.controller=INFO,kafka.producer.async.DefaultEventHandler=INFO,state.change.logger=INFO,kafka.authorizer.logger=DEBUG"
@@ -111,6 +116,7 @@ services:
 
   ksm:
     image: conduktor/kafka-security-manager:latest
+    logging: *default-logging
     environment:
       KSM_READONLY: "false"
       AUTHORIZER_ZOOKEEPER_CONNECT: "zookeeper:2181"
@@ -133,10 +139,7 @@ services:
 
   schema-registry:
     image: confluentinc/cp-schema-registry:latest
-    logging:
-      driver: "json-file"
-      options:
-        max-size: "512m"
+    logging: *default-logging
     depends_on:
       - zookeeper
       - broker1
@@ -181,6 +184,7 @@ services:
 
   rest-proxy:
     image: confluentinc/cp-kafka-rest:7.1.1
+    logging: *default-logging
     depends_on:
       - zookeeper
       - broker1
@@ -211,13 +215,10 @@ services:
       # KAFKA_REST_LOG4J_ROOT_LOGLEVEL: 'TRACE'
       KAFKA_REST_LOG4J_LOGGERS: "io.confluent.kafka.serializers=WARN"
       # KAFKA_REST_DEBUG: 'True'
-    logging:
-      driver: "json-file"
-      options:
-        max-size: "1024m"
 
   nginx:
     image: xcgd/nginx-vts:stable
+    logging: *default-logging
     restart: always
     depends_on:
       - ra
@@ -238,13 +239,10 @@ services:
     #  interval: 30s
     #  timeout: 3s
     #  retries: 3
-    logging:
-      driver: "json-file"
-      options:
-        max-size: "512m"
 
   cmak:
     image: hlebalbau/kafka-manager
+    logging: *default-logging
     ports:
     - 9000:9000
     environment:
@@ -262,6 +260,7 @@ services:
     
   akhq:
     image: tchiotludo/akhq:latest
+    logging: *default-logging
     ports:
     - 8080:8080
     environment:
@@ -289,19 +288,25 @@ services:
     restart: always
 
   ra:
-    image: e11it/rab:latest
+    image: e11it/ra:latest
+    logging: *default-logging
     restart: always
+    hostname: ra
     environment:
       GIN_MODE: release
+      RA_CONFIG_FILE: /config.yml
     volumes:
       - "${PWD}/ra/config.yml:/config.yml:ro"
     restart: always
 
   ra-sr:
-    image: e11it/rab:latest
+    image: e11it/ra:latest
+    logging: *default-logging
+    hostname: ra-sr
     restart: always
     environment:
       GIN_MODE: release
+      RA_CONFIG_FILE: /config.yml
     volumes:
       - "${PWD}/ra/config-sr.yml:/config.yml:ro"
     restart: always
@@ -309,6 +314,8 @@ services:
 volumes:
   kafka_b1_data: {}
   kafka_b2_data: {}
+  kafka_zookeeper: {}
 
 networks:
   back-tier:
+...
