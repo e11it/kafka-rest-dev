@@ -31,11 +31,46 @@ Start:
 HOSTNAME=$(hostname) docker-compose up -d
 ```
 
+or (better) set host name to .env file
+```bash
+echo "HOSTNAME=$(hostname)" >> .env
+docker-compose up -d
+```
+
 Stop(and clean all data):
 ```bash
 HOSTNAME=$(hostname) docker-compose down -v
 ```
 
+
+## KCat
+
+### Get broker metadata
+
+```
+kcat -X security.protocol=ssl \
+     -X ssl.ca.location=secrets/snakeoil-ca-1.crt \
+     -X ssl.certificate.location=secrets/kafkacat.pem \
+     -X ssl.key.location=secrets/kafkacat.key \
+     -X ssl.key.password=changeme \
+     -L -b localhost:19093 -J
+```
+
+Output (example):
+```
+{"originating_broker":{"id":-1,"name":"ssl://localhost:19093/bootstrap"},"query":{"topic":"*"},"controllerid":1,"brokers":[{"id":2,"name":"MacBook-Pro-Ilya.local:29093"},{"id":1,"name":"MacBook-Pro-Ilya.local:19093"}],"topics":[]}
+```
+
+### Produce a message
+
+```
+echo '123123' | kcat -X security.protocol=ssl \
+	-X ssl.ca.location=secrets/snakeoil-ca-1.crt \
+        -X ssl.certificate.location=secrets/kafkacat.pem \
+        -X ssl.key.location=secrets/kafkacat.key \
+        -X ssl.key.password=changeme \
+        -b localhost:19093 -P -t  999-9.example.db.name.0
+```
 
 ## Kafka REST
 

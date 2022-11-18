@@ -10,3 +10,6 @@ User:akhq,Topic,LITERAL,*,DescribeConfigs,Allow,*
 User:akhq,Topic,LITERAL,*,Read,Allow,*
 User:akhq,Topic,LITERAL,*,DESCRIBE,Allow,*
 User:akhq,Topic,LITERAL,*,Delete,Allow,*
+User:kafkacat,Cluster,LITERAL,kafka-cluster,DESCRIBE,Allow,*
+User:kafkacat,Topic,PREFIXED,999-9,All,Allow,*
+User:kafkacat,Group,PREFIXED,kafkacat.,All,Allow,*

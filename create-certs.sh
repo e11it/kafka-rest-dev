@@ -41,9 +41,8 @@ generate_pem_certs() {
     -in "$(concatenate_paths ${OUT_PATH} ${_cn_name}.req)" \
     -out "$(concatenate_paths ${OUT_PATH} ${_cn_name}.pem)" \
     -days 9999 -CAcreateserial -passin "pass:${JKS_PASS}"
-  cat "$(concatenate_paths ${OUT_PATH} ${_cn_name}.key)" >> "$(concatenate_paths ${OUT_PATH} ${_cn_name}.pem)"
 
-  rm -f "$(concatenate_paths ${OUT_PATH} ${_cn_name}.req)" "$(concatenate_paths ${OUT_PATH} ${_cn_name}.key)"
+  rm -f "$(concatenate_paths ${OUT_PATH} ${_cn_name}.req)" 
 }
 
 generate_jks_certs() {
