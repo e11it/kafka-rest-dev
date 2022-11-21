@@ -37,6 +37,11 @@ echo "HOSTNAME=$(hostname)" >> .env
 docker-compose up -d
 ```
 
+or only kafka
+```
+docker-compose up -d broker1 broker2 zookeeper ksm cmak akhq
+```
+
 Stop(and clean all data):
 ```bash
 HOSTNAME=$(hostname) docker-compose down -v
