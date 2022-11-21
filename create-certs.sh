@@ -7,8 +7,11 @@ set -o nounset \
 
 # VARS
 SCRIPTPATH="$( cd -- "$(dirname "$0")" >/dev/null 2>&1 ; pwd -P )"
-# shellcheck source=/dev/null
-source "${SCRIPTPATH}/.env"
+if [ -f .env ]; then
+	# shellcheck source=/dev/null
+	source "${SCRIPTPATH}/.env"
+fi
+JKS_PASS=${JKS_PASS:-changeit}
 OUT_PATH="${SCRIPTPATH}/secrets"
 
 
