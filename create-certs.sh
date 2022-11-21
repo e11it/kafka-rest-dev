@@ -10,8 +10,11 @@ SCRIPTPATH="$( cd -- "$(dirname "$0")" >/dev/null 2>&1 ; pwd -P )"
 if [ -f .env ]; then
 	# shellcheck source=/dev/null
 	source "${SCRIPTPATH}/.env"
+else
+   echo "Create .env file with JKS_PASS variable"
+   exit 1
 fi
-JKS_PASS=${JKS_PASS:-changeit}
+JKS_PASS=${JKS_PASS:-changeme}
 OUT_PATH="${SCRIPTPATH}/secrets"
 
 

@@ -288,10 +288,12 @@ services:
     restart: always
 
   ra:
-    image: e11it/ra:latest
+    image: e11it/ra:v2
     logging: *default-logging
     restart: always
     hostname: ra
+    depends_on:
+      - rest-proxy
     environment:
       GIN_MODE: release
       RA_CONFIG_FILE: /config.yml
@@ -300,7 +302,7 @@ services:
     restart: always
 
   ra-sr:
-    image: e11it/ra:latest
+    image: e11it/ra:v2
     logging: *default-logging
     hostname: ra-sr
     restart: always
