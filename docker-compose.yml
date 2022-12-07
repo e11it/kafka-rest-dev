@@ -36,6 +36,7 @@ services:
       - "/etc/localtime:/etc/localtime:ro"
       - kafka_b1_data:/var/lib/kafka/data
       - "./secrets:/etc/kafka/secrets"
+      - "./kafka_ra/kafka-tn-000-1-1.0-SNAPSHOT.jar:/usr/share/java/kafka/kafka-ra.jar"
     environment:
       KAFKA_BROKER_ID: 1
       KAFKA_LOG4J_LOGGERS: "kafka.controller=INFO,kafka.producer.async.DefaultEventHandler=INFO,state.change.logger=INFO,kafka.authorizer.logger=DEBUG"
@@ -66,6 +67,9 @@ services:
       KAFKA_SSL_ENDPOINT_IDENTIFICATION_ALGORITHM: ""
       KAFKA_LISTENER_NAME_INTERNAL_SSL_ENDPOINT_IDENTIFICATION_ALGORITHM: ""
       KAFKA_SSL_CLIENT_AUTH: requested
+      KAFKA_CREATE_TOPIC_POLICY_CLASS_NAME: org.ra.PatternMatchingCreateTopicPolicy
+      KAFKA_RA_TOPIC_PATTERN: ^999-9(-\\d{3}-\\d)?\\.[a-z0-9-]+\\.(db|cdc|cmd|sys|log|tmp)\\.[a-z0-9-.]+\\.\\d+$
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: true
 
   broker2:
     image: confluentinc/cp-kafka:latest
@@ -78,6 +82,7 @@ services:
       - "/etc/localtime:/etc/localtime:ro"
       - kafka_b2_data:/var/lib/kafka/data
       - "./secrets:/etc/kafka/secrets"
+      - "./kafka_ra/kafka-tn-000-1-1.0-SNAPSHOT.jar:/usr/share/java/kafka/kafka-ra.jar"
     ulimits:
       nproc: 65535
       nofile:
@@ -113,7 +118,9 @@ services:
       KAFKA_SSL_ENDPOINT_IDENTIFICATION_ALGORITHM: ""
       KAFKA_LISTENER_NAME_INTERNAL_SSL_ENDPOINT_IDENTIFICATION_ALGORITHM: ""
       KAFKA_SSL_CLIENT_AUTH: requested
-
+      KAFKA_CREATE_TOPIC_POLICY_CLASS_NAME: org.ra.PatternMatchingCreateTopicPolicy
+      KAFKA_RA_TOPIC_PATTERN: ^999-9(-\\d{3}-\\d)?\\.[a-z0-9-]+\\.(db|cdc|cmd|sys|log|tmp)\\.[a-z0-9-.]+\\.\\d+$
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: true
   ksm:
     image: conduktor/kafka-security-manager:latest
     logging: *default-logging
@@ -299,7 +306,6 @@ services:
       RA_CONFIG_FILE: /config.yml
     volumes:
       - "${PWD}/ra/config.yml:/config.yml:ro"
-    restart: always
 
   ra-sr:
     image: e11it/ra:v2
@@ -311,7 +317,6 @@ services:
       RA_CONFIG_FILE: /config.yml
     volumes:
       - "${PWD}/ra/config-sr.yml:/config.yml:ro"
-    restart: always
 
 volumes:
   kafka_b1_data: {}
