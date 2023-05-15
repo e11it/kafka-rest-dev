@@ -17,8 +17,13 @@ services:
     environment:
       ZOOKEEPER_CLIENT_PORT: 2181
       ZOOKEEPER_TICK_TIME: 2000
+      KAFKA_OPTS: -Djava.security.auth.login.config=/etc/kafka/zookeeper_server_jaas.conf
+                -Dzookeeper.authProvider.1=org.apache.zookeeper.server.auth.SASLAuthenticationProvider
+                -Dzookeeper.allowSaslFailedClients=false
+                -Dzookeeper.requireClientAuthScheme=sasl
     volumes:
       - kafka_zookeeper:/var/lib/zookeeper
+      - ./zookeeper/zookeeper.sasl.jaas.config:/etc/kafka/zookeeper_server_jaas.conf
 
   broker1:
     image: confluentinc/cp-kafka:latest
@@ -27,6 +32,7 @@ services:
       - zookeeper
     ports:
       - "19093:19093"
+      - "19095:19095"
     ulimits:
       nproc: 65535
       nofile:
@@ -37,14 +43,15 @@ services:
       - kafka_b1_data:/var/lib/kafka/data
       - "./secrets:/etc/kafka/secrets"
       - "./kafka_ra/kafka-tn-000-1-1.0-SNAPSHOT.jar:/usr/share/java/kafka/kafka-ra.jar"
+      - "./kafka_server_jaas.conf:/etc/kafka/kafka_server_jaas.conf"
     environment:
       KAFKA_BROKER_ID: 1
       KAFKA_LOG4J_LOGGERS: "kafka.controller=INFO,kafka.producer.async.DefaultEventHandler=INFO,state.change.logger=INFO,kafka.authorizer.logger=DEBUG"
       KAFKA_AUTHORIZER_CLASS_NAME: kafka.security.authorizer.AclAuthorizer
       KAFKA_LOG_RETENTION_BYTES: 3221225472
       KAFKA_ZOOKEEPER_CONNECT: 'zookeeper:2181'
-      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: SSL:SSL,SSL_INT:SSL
-      KAFKA_ADVERTISED_LISTENERS: "SSL_INT://broker1:9093,SSL://$HOSTNAME:19093"
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: SSL:SSL,SSL_INT:SSL,SASL_SSL:SASL_SSL
+      KAFKA_ADVERTISED_LISTENERS: "SSL_INT://broker1:9093,SSL://$HOSTNAME:19093,SASL_SSL://$HOSTNAME:19095"
       KAFKA_INTER_BROKER_LISTENER_NAME: SSL_INT
       KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
       KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
@@ -70,6 +77,8 @@ services:
       KAFKA_CREATE_TOPIC_POLICY_CLASS_NAME: org.ra.PatternMatchingCreateTopicPolicy
       KAFKA_RA_TOPIC_PATTERN: ^999-9(-\\d{3}-\\d)?\\.[a-z0-9-]+\\.(db|cdc|cmd|sys|log|tmp)\\.[a-z0-9-.]+\\.\\d+$
       KAFKA_AUTO_CREATE_TOPICS_ENABLE: true
+      KAFKA_SASL_ENABLED_MECHANISMS: SCRAM-SHA-256
+      KAFKA_OPTS: -Djava.security.auth.login.config=/etc/kafka/kafka_server_jaas.conf -Dzookeeper.sasl.client=true
 
   broker2:
     image: confluentinc/cp-kafka:latest
@@ -78,11 +87,13 @@ services:
       - zookeeper
     ports:
       - "29093:29093"
+      - "29095:29095"
     volumes:
       - "/etc/localtime:/etc/localtime:ro"
       - kafka_b2_data:/var/lib/kafka/data
       - "./secrets:/etc/kafka/secrets"
       - "./kafka_ra/kafka-tn-000-1-1.0-SNAPSHOT.jar:/usr/share/java/kafka/kafka-ra.jar"
+      - "./kafka_server_jaas.conf:/etc/kafka/kafka_server_jaas.conf"
     ulimits:
       nproc: 65535
       nofile:
@@ -94,8 +105,8 @@ services:
       KAFKA_AUTHORIZER_CLASS_NAME: kafka.security.authorizer.AclAuthorizer
       KAFKA_LOG_RETENTION_BYTES: 3221225472
       KAFKA_ZOOKEEPER_CONNECT: 'zookeeper:2181'
-      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: SSL:SSL,SSL_INT:SSL
-      KAFKA_ADVERTISED_LISTENERS: "SSL_INT://broker2:9093,SSL://$HOSTNAME:29093"
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: SSL:SSL,SSL_INT:SSL,SASL_SSL:SASL_SSL
+      KAFKA_ADVERTISED_LISTENERS: "SSL_INT://broker2:9093,SSL://$HOSTNAME:29093,SASL_SSL://$HOSTNAME:29095"
       KAFKA_INTER_BROKER_LISTENER_NAME: SSL_INT
       KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
       KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
@@ -121,6 +132,9 @@ services:
       KAFKA_CREATE_TOPIC_POLICY_CLASS_NAME: org.ra.PatternMatchingCreateTopicPolicy
       KAFKA_RA_TOPIC_PATTERN: ^999-9(-\\d{3}-\\d)?\\.[a-z0-9-]+\\.(db|cdc|cmd|sys|log|tmp)\\.[a-z0-9-.]+\\.\\d+$
       KAFKA_AUTO_CREATE_TOPICS_ENABLE: true
+      KAFKA_SASL_ENABLED_MECHANISMS: SCRAM-SHA-256
+      KAFKA_OPTS: -Djava.security.auth.login.config=/etc/kafka/kafka_server_jaas.conf -Dzookeeper.sasl.client=true
+
   ksm:
     image: conduktor/kafka-security-manager:latest
     logging: *default-logging

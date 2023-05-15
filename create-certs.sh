@@ -71,6 +71,8 @@ generate_jks_certs() {
 	keytool -noprompt -keystore "$(concatenate_paths ${OUT_PATH} ${_file_name}.keystore.jks)" \
     -alias "${_cn_name}" -certreq \
     -file "$(concatenate_paths ${OUT_PATH} ${_file_name}.csr)" \
+                                 -ext SAN=dns:localhost,ip:127.0.0.1 \
+                                 -ext SAN=dns:$(hostname) \
     -storepass "${JKS_PASS}" -keypass "${JKS_PASS}"
 
 	openssl x509 -req \
