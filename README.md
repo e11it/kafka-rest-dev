@@ -108,7 +108,13 @@ You can check data in the AKHQ.
 3. Generate new secrets(`./create-certs.sh`)
 4. Start services from docker-compose
 
+## OPA
+
+Gen policy:
+ docker run -it --rm -v $(pwd)/policy:/policy  openpolicyagent/opa:0.54.0-rootless build /policy/base.rego -o /policy/bundle.tar.gz
+
 
 ### TODO:
 - https://traefik.io/blog/traefik-2-tls-101-23b4fbee81f1/
 - Сервис генерации бутрап схем и валидации
+- opa: https://repo1.maven.org/maven2/org/openpolicyagent/kafka/opa-authorizer/

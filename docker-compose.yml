@@ -10,7 +10,7 @@ x-logging:
 
 services:
   zookeeper:
-    image: confluentinc/cp-zookeeper:latest
+    image: confluentinc/cp-zookeeper:$CONFLUENT_V
     logging: *default-logging
     hostname: zookeeper
     container_name: zookeeper
@@ -26,7 +26,7 @@ services:
       - ./zookeeper/zookeeper.sasl.jaas.config:/etc/kafka/zookeeper_server_jaas.conf
 
   broker1:
-    image: confluentinc/cp-kafka:latest
+    image: confluentinc/cp-kafka:$CONFLUENT_V
     logging: *default-logging
     depends_on:
       - zookeeper
@@ -39,6 +39,7 @@ services:
         soft: 262144
         hard: 262144
     volumes:
+      - "./plugin:/plugin"
       - "/etc/localtime:/etc/localtime:ro"
       - kafka_b1_data:/var/lib/kafka/data
       - "./secrets:/etc/kafka/secrets"
@@ -46,8 +47,13 @@ services:
       - "./kafka_server_jaas.conf:/etc/kafka/kafka_server_jaas.conf"
     environment:
       KAFKA_BROKER_ID: 1
+      CLASSPATH: "/plugin/*"
+      KAFKA_AUTHORIZER_CLASS_NAME: org.openpolicyagent.kafka.OpaAuthorizer
+      KAFKA_OPA_AUTHORIZER_URL: http://opa:8181/v1/data/kafka/authz/allow
+      KAFKA_OPA_AUTHORIZER_CACHE_EXPIRE_AFTER_SECONDS: 10 # For development only
+      KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 100
       KAFKA_LOG4J_LOGGERS: "kafka.controller=INFO,kafka.producer.async.DefaultEventHandler=INFO,state.change.logger=INFO,kafka.authorizer.logger=DEBUG"
-      KAFKA_AUTHORIZER_CLASS_NAME: kafka.security.authorizer.AclAuthorizer
+      #KAFKA_AUTHORIZER_CLASS_NAME: kafka.security.authorizer.AclAuthorizer
       KAFKA_LOG_RETENTION_BYTES: 3221225472
       KAFKA_ZOOKEEPER_CONNECT: 'zookeeper:2181'
       KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: SSL:SSL,SSL_INT:SSL,SASL_SSL:SASL_SSL
@@ -81,7 +87,7 @@ services:
       KAFKA_OPTS: -Djava.security.auth.login.config=/etc/kafka/kafka_server_jaas.conf -Dzookeeper.sasl.client=true
 
   broker2:
-    image: confluentinc/cp-kafka:latest
+    image: confluentinc/cp-kafka:$CONFLUENT_V
     logging: *default-logging
     depends_on:
       - zookeeper
@@ -94,6 +100,7 @@ services:
       - "./secrets:/etc/kafka/secrets"
       - "./kafka_ra/kafka-tn-000-1-1.0-SNAPSHOT.jar:/usr/share/java/kafka/kafka-ra.jar"
       - "./kafka_server_jaas.conf:/etc/kafka/kafka_server_jaas.conf"
+      - "./plugin:/plugin"
     ulimits:
       nproc: 65535
       nofile:
@@ -101,8 +108,13 @@ services:
         hard: 262144
     environment:
       KAFKA_BROKER_ID: 2
+      CLASSPATH: "/plugin/*"
+      KAFKA_AUTHORIZER_CLASS_NAME: org.openpolicyagent.kafka.OpaAuthorizer
+      KAFKA_OPA_AUTHORIZER_URL: http://opa:8181/v1/data/kafka/authz/allow
+      KAFKA_OPA_AUTHORIZER_CACHE_EXPIRE_AFTER_SECONDS: 10 # For development only
+      KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 100
       KAFKA_LOG4J_LOGGERS: "kafka.controller=INFO,kafka.producer.async.DefaultEventHandler=INFO,state.change.logger=INFO,kafka.authorizer.logger=DEBUG"
-      KAFKA_AUTHORIZER_CLASS_NAME: kafka.security.authorizer.AclAuthorizer
+      # KAFKA_AUTHORIZER_CLASS_NAME: kafka.security.authorizer.AclAuthorizer
       KAFKA_LOG_RETENTION_BYTES: 3221225472
       KAFKA_ZOOKEEPER_CONNECT: 'zookeeper:2181'
       KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: SSL:SSL,SSL_INT:SSL,SASL_SSL:SASL_SSL
@@ -135,31 +147,8 @@ services:
       KAFKA_SASL_ENABLED_MECHANISMS: SCRAM-SHA-256
       KAFKA_OPTS: -Djava.security.auth.login.config=/etc/kafka/kafka_server_jaas.conf -Dzookeeper.sasl.client=true
 
-  ksm:
-    image: conduktor/kafka-security-manager:latest
-    logging: *default-logging
-    environment:
-      KSM_READONLY: "false"
-      AUTHORIZER_ZOOKEEPER_CONNECT: "zookeeper:2181"
-      # FILE:
-      SOURCE_CLASS: "io.conduktor.ksm.source.FileSourceAcl"
-      SOURCE_FILE_FILENAME: "config/acls.csv"
-      AUTHORIZER_CLASS: "io.conduktor.ksm.compat.AdminClientAuthorizer"
-      ADMIN_CLIENT_BOOTSTRAP_SERVERS: "broker1:9093,broker2:9093"
-      ADMIN_CLIENT_SECURITY_PROTOCOL: SSL
-      ADMIN_CLIENT_SSL_KEYSTORE_LOCATION: /etc/kafka/secrets/ksm.keystore.jks
-      ADMIN_CLIENT_SSL_KEYSTORE_PASSWORD: $JKS_PASS
-      ADMIN_CLIENT_SSL_TRUSTSTORE_LOCATION: /etc/kafka/secrets/ksm.truststore.jks
-      ADMIN_CLIENT_SSL_TRUSTSTORE_PASSWORD: $JKS_PASS
-    volumes:
-      - "${PWD}/ksm:/opt/docker/config:ro"
-      - "${PWD}/secrets:/etc/kafka/secrets"
-    depends_on:
-      - broker1
-      - broker2
-
   schema-registry:
-    image: confluentinc/cp-schema-registry:latest
+    image: confluentinc/cp-schema-registry:$CONFLUENT_V
     logging: *default-logging
     depends_on:
       - zookeeper
@@ -204,7 +193,7 @@ services:
       PROXY: 1
 
   rest-proxy:
-    image: confluentinc/cp-kafka-rest:7.1.1
+    image: confluentinc/cp-kafka-rest:$CONFLUENT_V
     logging: *default-logging
     depends_on:
       - zookeeper
@@ -254,12 +243,27 @@ services:
     volumes:
       - "/etc/localtime:/etc/localtime:ro"
       - ./nginx:/etc/nginx:ro
+      - "./policy:/usr/share/nginx/policy"
     command: ["nginx", "-g", "daemon off;"]
     #healthcheck:
     #  test: ['CMD', 'curl --fail http://localhost/ || exit 1']
     #  interval: 30s
     #  timeout: 3s
     #  retries: 3
+
+  opa:
+    image: openpolicyagent/opa:0.54.0-rootless
+    ports:
+      - "8181:8181"
+    command:
+      - "run"
+      - "--server"
+      - "--set=decision_logs.console=true"
+      - "--set=services.authz.url=http://nginx"
+      - "--set=bundles.authz.service=authz"
+      - "--set=bundles.authz.resource=bundle.tar.gz"
+    depends_on:
+      - nginx
 
   cmak:
     image: hlebalbau/kafka-manager
